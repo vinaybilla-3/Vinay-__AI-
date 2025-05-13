@@ -1,0 +1,68 @@
+import numpy as np
+from queue import PriorityQueue
+
+class PuzzleState:
+    def __init__(self, board, moves=0, previous=None):
+        self.board = board
+        self.blank_tile = self.find_blank()
+        self.moves = moves
+        self.previous = previous
+
+    def find_blank(self):
+        return tuple(np.argwhere(self.board == 0)[0])
+
+    def get_neighbors(self):
+        neighbors = []
+        x, y = self.blank_tile
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        
+        for dx, dy in directions:
+            new_x, new_y = x + dx, y + dy
+            if 0 <= new_x < 3 and 0 <= new_y < 3:
+                new_board = self.board.copy()
+                new_board[x, y], new_board[new_x, new_y] = new_board[new_x, new_y], new_board[x, y]
+                neighbors.append(PuzzleState(new_board, self.moves + 1, self))
+        
+        return neighbors
+
+    def is_goal(self):
+        return np.array_equal(self.board, np.array([[1, 2, 3], [4, 5, 6], [7, 8, 0]]))
+
+    def __lt__(self, other):
+        return self.moves < other.moves
+
+def a_star(start):
+    open_set = PriorityQueue()
+    open_set.put((0, start))
+    closed_set = set()
+
+    while not open_set.empty():
+        current = open_set.get()[1]
+
+        if current.is_goal():
+            return current
+
+        closed_set.add(tuple(map(tuple, current.board)))
+
+        for neighbor in current.get_neighbors():
+            if tuple(map(tuple, neighbor.board)) not in closed_set:
+                open_set.put((neighbor.moves, neighbor))
+
+    return None
+
+def print_solution(solution):
+    path = []
+    while solution:
+        path.append(solution.board)
+        solution = solution.previous
+    for step in reversed(path):
+        print(step)
+
+if __name__ == "__main__":
+    initial_board = np.array([[1, 2, 3], [4, 0, 5], [7, 8, 6]])
+    start_state = PuzzleState(initial_board)
+    solution = a_star(start_state)
+    if solution:
+        print_solution(solution)
+    else:
+        print("No solution found.")
